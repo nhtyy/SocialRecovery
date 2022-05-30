@@ -140,11 +140,12 @@ contract Contract {
             _proposal.deadline <= block.timestamp &&
             !_proposal.executed
         );
-        
+
         if (propsals[index].operation) {
             signingKey = _proposal.proposedAddress;
         } else {
             guardians[guardianIndex[_proposal._replaced]] = _proposal.proposedAddress;
+            isGuardian[_proposal.proposedAddress] = true;
         }
 
         propsals[index].executed = true;
