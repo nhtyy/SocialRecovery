@@ -103,7 +103,7 @@ contract HotWallet {
         propsals.push(
             Proposal(
                 _proposedSigner, 
-                msg.sender,
+                signingKey,
                 0, 
                 block.timestamp + expiry, 
                 true,
@@ -150,5 +150,4 @@ contract HotWallet {
 
         propsals[index].executed = true;
     }
-
 }
