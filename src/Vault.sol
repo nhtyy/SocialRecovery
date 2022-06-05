@@ -4,7 +4,7 @@ pragma solidity ^0.8.10;
 contract Vault {
 
     event NewTx(
-        uint256 indexed nonce,
+        uint256 indexed value,
         address indexed to,
         bytes indexed data
     );
@@ -23,14 +23,13 @@ contract Vault {
         bytes data;
         uint256 veto;
         uint256 delay; // timestamp in which tx can no longer be executed
-        bool confirmed; // tx has been executed
     }
 
 ///=============================================================================================
 /// State
 ///=============================================================================================
 
-    Transaction[] public transactions;
+    Transaction public transaction;
 
     // tx index -> guardian -> bool : did veto
     mapping(uint256 => mapping(address => bool)) veto;
@@ -56,25 +55,40 @@ contract Vault {
         uint256 value,
         bytes calldata data
     ) external {
-        transactions.push(
+        transaction = 
             Transaction(
                 to,
                 value,
                 data,
                 0,
-                block.timestamp + expiry,
-                false
-            )
+                block.timestamp + expiry
         );
 
-        emit NewTx(transactions.length - 1, to, data);
+        emit NewTx(value, to, data);
     }
 
-    function executeTransaction(uint256 nonce) external {
+    function executeTransaction() external {
+        require(block.timestamp > transaction.delay, "Delay has not yet passed");
+        Transaction memory _transaction = transaction;
+
+        (bool success, ) = _transaction.to.call{value: _transaction.value}(_transaction.data);
+        require(success, "Transaction Failed");
+        clearTransaction();
+    }
+
+    function vetoTransaction(uint256 nonce, string calldata reason) external {
+        require(veto )
 
     }
 
-    function vetoTransction(uint256 nonce, string calldata reason) external {
-
+    function clearTransaction() internal {
+        transaction = 
+            Transaction(
+                address(0),
+                0,
+                abi.encode(0),
+                0,
+                0
+            );
     }
 }
