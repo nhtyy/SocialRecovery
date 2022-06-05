@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
+import "./Hot.sol";
+
 contract Vault {
 
     event NewTx(
@@ -23,20 +25,21 @@ contract Vault {
         bytes data;
         uint256 veto;
         uint256 delay; // timestamp in which tx can no longer be executed
+        bool executed;
     }
 
 ///=============================================================================================
 /// State
 ///=============================================================================================
 
-    Transaction public transaction;
+    Transaction[] public transactions;
+
+    uint256 public currentTx;
 
     // tx index -> guardian -> bool : did veto
     mapping(uint256 => mapping(address => bool)) veto;
 
-    uint256 public currentTx;
-
-    address immutable HotWallet;
+    HotWallet immutable hot;
     uint256 immutable expiry; // time in seconds tx are valid for
     uint256 immutable quorum;
 
@@ -45,50 +48,69 @@ contract Vault {
 ///=============================================================================================
 
     constructor(uint256 _expiry, uint256 _quorum) {
-        HotWallet = msg.sender;
+        hot = HotWallet(msg.sender);
         expiry = _expiry;
         quorum = _quorum;
     }
+
+///=============================================================================================
+/// Modifiers
+///=============================================================================================    
+
+    modifier onlyGuardian() {
+        require(hot.isGuardian(msg.sender), "Not A Guardian");
+        _;
+    }
+
+    modifier onlySigner() {
+        require(hot.signingKey(), "Not The Signer");
+        _;
+    }
+
+///=============================================================================================
+/// External Methods
+///=============================================================================================    
 
     function proposeTransaction(
         address to,
         uint256 value,
         bytes calldata data
-    ) external {
-        transaction = 
+    ) external onlySigner {
+        transactions.push(
             Transaction(
                 to,
                 value,
                 data,
                 0,
-                block.timestamp + expiry
+                block.timestamp + expiry,
+                false
+            )
         );
+
+        currentTx = transactions.length - 1;
 
         emit NewTx(value, to, data);
     }
 
-    function executeTransaction() external {
-        require(block.timestamp > transaction.delay, "Delay has not yet passed");
-        Transaction memory _transaction = transaction;
+    function executeTransaction() external onlySigner {
+        Transaction memory _transaction = transactions[currentTx];
+        require(block.timestamp > _transaction.delay, "Delay has not yet passed");
+        require(_transaction.delay != 0, "This Tx is empty");
+        require(!_transaction.executed, "Tx already executed");
+
+        transactions[currentTx].executed = true;
 
         (bool success, ) = _transaction.to.call{value: _transaction.value}(_transaction.data);
         require(success, "Transaction Failed");
-        clearTransaction();
     }
 
-    function vetoTransaction(uint256 nonce, string calldata reason) external {
-        require(veto )
+    function vetoTransaction(string calldata reason) external onlyGuardian {
+        require(!veto[currentTx][msg.sender], "Already Vetoed");
 
-    }
+        transactions[currentTx].veto += 1;
 
-    function clearTransaction() internal {
-        transaction = 
-            Transaction(
-                address(0),
-                0,
-                abi.encode(0),
-                0,
-                0
-            );
+        if (transactions[currentTx].veto > quorum) {
+            currentTx += 1;
+        }
     }
 }
