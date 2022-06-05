@@ -63,7 +63,7 @@ contract Vault {
     }
 
     modifier onlySigner() {
-        require(hot.signingKey(), "Not The Signer");
+        require(hot.signingKey() == msg.sender);
         _;
     }
 
@@ -112,5 +112,7 @@ contract Vault {
         if (transactions[currentTx].veto > quorum) {
             currentTx += 1;
         }
+
+        emit VetoReason(reason);
     }
 }
