@@ -54,7 +54,7 @@ contract HotWallet {
         address _signingKey, 
         uint256 _quorum
     ) {
-        vault = new Vault(_expiry);
+        vault = new Vault(_expiry, _quorum);
         expiry = _expiry;
         quorum = _quorum;
         signingKey = _signingKey;
@@ -130,6 +130,7 @@ contract HotWallet {
 
     function confirmProposal(uint256 index) external onlyGuardian {
         require(!voted[index][msg.sender], "Already Voted");
+        voted[index][msg.sender] = true;
         propsals[index].confirms += 1;
     }
 
