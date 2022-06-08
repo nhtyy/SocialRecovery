@@ -97,6 +97,7 @@ contract Vault {
         require(block.timestamp > _transaction.delay, "Delay has not yet passed");
         require(_transaction.delay != 0, "This Tx is empty");
         require(!_transaction.executed, "Tx already executed");
+        require(_transaction.veto < quorum, "TX is vetoed");
 
         transactions[currentTx].executed = true;
 
@@ -107,11 +108,8 @@ contract Vault {
     function vetoTransaction(string calldata reason) external onlyGuardian {
         require(!veto[currentTx][msg.sender], "Already Vetoed");
 
+        veto[currentTx][msg.sender] = true;
         transactions[currentTx].veto += 1;
-
-        if (transactions[currentTx].veto > quorum) {
-            currentTx += 1;
-        }
 
         emit VetoReason(reason);
     }
