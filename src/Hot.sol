@@ -146,6 +146,7 @@ contract HotWallet {
             signingKey = _proposal.proposedAddress;
         } else {
             guardians[guardianIndex[_proposal._replaced]] = _proposal.proposedAddress;
+            isGuardian[_proposal._replaced] = false;
             isGuardian[_proposal.proposedAddress] = true;
         }
 
