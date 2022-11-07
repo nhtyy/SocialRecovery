@@ -4,10 +4,9 @@ pragma solidity ^0.8.10;
 import "./Vault.sol";
 
 contract HotWallet {
-
-///=============================================================================================
-/// Data Types
-///=============================================================================================
+    ///=============================================================================================
+    /// Data Types
+    ///=============================================================================================
 
     struct Proposal {
         address proposedAddress;
@@ -18,9 +17,9 @@ contract HotWallet {
         bool executed;
     }
 
-///=============================================================================================
-/// Immutable State
-///=============================================================================================
+    ///=============================================================================================
+    /// Immutable State
+    ///=============================================================================================
 
     uint256 immutable expiry;
 
@@ -28,30 +27,30 @@ contract HotWallet {
 
     Vault immutable vault;
 
-///=============================================================================================
-/// State
-///=============================================================================================
+    ///=============================================================================================
+    /// State
+    ///=============================================================================================
 
     address public signingKey;
 
     Proposal[] public propsals;
 
-    mapping (address => bool) public isGuardian;
+    mapping(address => bool) public isGuardian;
 
     address[] public guardians;
-    mapping (address => uint256) guardianIndex;
+    mapping(address => uint256) guardianIndex;
 
     // proposals index => guardian => bool
-    mapping (uint256 => mapping (address => bool)) voted;
+    mapping(uint256 => mapping(address => bool)) voted;
 
-///=============================================================================================
-/// Constructor
-///=============================================================================================
+    ///=============================================================================================
+    /// Constructor
+    ///=============================================================================================
 
     constructor(
-        address[] memory _guardians, 
-        uint256 _expiry, 
-        address _signingKey, 
+        address[] memory _guardians,
+        uint256 _expiry,
+        address _signingKey,
         uint256 _quorum
     ) {
         vault = new Vault(_expiry, _quorum);
@@ -60,19 +59,20 @@ contract HotWallet {
         signingKey = _signingKey;
 
         uint256 length = _guardians.length;
-        for (uint256 i; i < length;) {
-
+        for (uint256 i; i < length; ) {
             isGuardian[_guardians[i]] = true;
 
             guardians.push(_guardians[i]);
-            guardianIndex[_guardians[i]] = guardians.length - 1;
-            unchecked {++i;}
+            guardianIndex[_guardians[i]] = i;
+            unchecked {
+                ++i;
+            }
         }
     }
 
-///=============================================================================================
-/// Modifiers
-///=============================================================================================
+    ///=============================================================================================
+    /// Modifiers
+    ///=============================================================================================
 
     modifier onlySigner() {
         require(msg.sender == signingKey, "Not The Signer");
@@ -84,9 +84,9 @@ contract HotWallet {
         _;
     }
 
-///=============================================================================================
-/// External Functions
-///=============================================================================================
+    ///=============================================================================================
+    /// External Functions
+    ///=============================================================================================
 
     function sendTx(
         address to,
@@ -97,15 +97,17 @@ contract HotWallet {
         require(success, "TX Failed");
     }
 
-    
-    function initiateSignerChange(address _proposedSigner) external onlyGuardian {
+    function initiateSignerChange(address _proposedSigner)
+        external
+        onlyGuardian
+    {
         require(_proposedSigner != address(0), "Zero Address");
         propsals.push(
             Proposal(
-                _proposedSigner, 
+                _proposedSigner,
                 signingKey,
-                0, 
-                block.timestamp + expiry, 
+                0,
+                block.timestamp + expiry,
                 true,
                 false
             )
@@ -113,15 +115,18 @@ contract HotWallet {
     }
 
     // new guardians MUST replace old guardians. The total amount of guardians should never change
-    function initiateGuardianChange(address _proposedSigner, address _replacing) external onlyGuardian {
+    function initiateGuardianChange(address _proposedSigner, address _replacing)
+        external
+        onlyGuardian
+    {
         require(_proposedSigner != address(0), "Zero Address");
         require(isGuardian[_replacing], "_replacing is not a guardian");
         propsals.push(
             Proposal(
-                _proposedSigner, 
-                _replacing, 
-                0, 
-                block.timestamp + expiry, 
+                _proposedSigner,
+                _replacing,
+                0,
+                block.timestamp + expiry,
                 false,
                 false
             )
@@ -137,15 +142,16 @@ contract HotWallet {
     function executeProposal(uint256 index) external onlyGuardian {
         Proposal memory _proposal = propsals[index];
         require(
-            _proposal.confirms >= quorum && 
-            _proposal.deadline <= block.timestamp &&
-            !_proposal.executed
+            _proposal.confirms >= quorum &&
+                _proposal.deadline <= block.timestamp &&
+                !_proposal.executed
         );
 
         if (propsals[index].operation) {
             signingKey = _proposal.proposedAddress;
         } else {
-            guardians[guardianIndex[_proposal._replaced]] = _proposal.proposedAddress;
+            guardians[guardianIndex[_proposal._replaced]] = _proposal
+                .proposedAddress;
             isGuardian[_proposal._replaced] = false;
             isGuardian[_proposal.proposedAddress] = true;
         }
